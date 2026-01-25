@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 fastapi
 uvicorn
 jinja2
 python-multipart
 streamlit
+=======
+fastapi
+uvicorn
+jinja2
+python-multipart
+streamlit
+>>>>>>> 26c380b (Initial commit: Streamlit app and trained model artifacts)
