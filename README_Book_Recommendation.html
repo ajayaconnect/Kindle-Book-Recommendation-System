@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kindle Book Recommendation System — Ajaya Kumar Pradhan</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0b0a08;
+    --surface: #131210;
+    --card: #1a1814;
+    --border: #2a2520;
+    --accent: #d97706;
+    --accent2: #f59e0b;
+    --gold-light: #fcd34d;
+    --green: #059669;
+    --red: #dc2626;
+    --sky: #0ea5e9;
+    --text: #e8e0d5;
+    --muted: #6b6355;
+    --faint: #1f1c18;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* paper texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%230b0a08'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' fill-opacity='0.015'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* warm glow */
+  .glow {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(140px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow-1 { width: 700px; height: 500px; background: rgba(217,119,6,0.08); top: -200px; left: -100px; }
+  .glow-2 { width: 400px; height: 400px; background: rgba(245,158,11,0.05); bottom: 0; right: 0; }
+
+  /* ── Nav ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2.5rem;
+    background: rgba(11,10,8,0.88);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* ── Main ── */
+  main {
+    position: relative; z-index: 1;
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 8rem 2rem 6rem;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    text-align: center;
+    margin-bottom: 5rem;
+    opacity: 0; transform: translateY(28px);
+    animation: fadeUp 0.9s ease forwards 0.2s;
+  }
+  .hero-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid rgba(245,158,11,0.25);
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    margin-bottom: 1.5rem;
+    background: rgba(245,158,11,0.05);
+  }
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2.6rem, 5.5vw, 4.2rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, #e8e0d5 0%, #a8926f 55%, #d97706 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1.2rem;
+  }
+  .hero-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 560px;
+    margin: 0 auto 2rem;
+    line-height: 1.75;
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+  }
+  .badge-row {
+    display: flex; flex-wrap: wrap;
+    justify-content: center; gap: 0.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.63rem;
+    letter-spacing: 0.05em;
+    padding: 0.28rem 0.7rem;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+  .b-amber { color: #fbbf24; border-color: rgba(251,191,36,0.28); background: rgba(251,191,36,0.06); }
+  .b-green { color: #34d399; border-color: rgba(52,211,153,0.28); background: rgba(52,211,153,0.06); }
+  .b-blue  { color: #60a5fa; border-color: rgba(96,165,250,0.28); background: rgba(96,165,250,0.06); }
+  .b-rose  { color: #fb7185; border-color: rgba(251,113,133,0.28); background: rgba(251,113,133,0.06); }
+  .b-sky   { color: #38bdf8; border-color: rgba(56,189,248,0.28); background: rgba(56,189,248,0.06); }
+  .b-purple{ color: #c084fc; border-color: rgba(192,132,252,0.28); background: rgba(192,132,252,0.06); }
+
+  .btn-row { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.73rem; letter-spacing: 0.06em;
+    padding: 0.65rem 1.4rem;
+    border-radius: 6px;
+    text-decoration: none; border: 1px solid;
+    transition: all 0.2s; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #b45309; border-color: #b45309; }
+  .btn-outline { background: transparent; border-color: var(--border); color: var(--muted); }
+  .btn-outline:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── Metrics ── */
+  .metrics {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+    margin-bottom: 4rem;
+    opacity: 0; animation: fadeUp 0.9s ease forwards 0.45s;
+  }
+  .metric-cell {
+    background: var(--surface); padding: 1.6rem 1rem;
+    text-align: center; transition: background 0.2s;
+  }
+  .metric-cell:hover { background: var(--faint); }
+  .metric-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.1rem; font-weight: 800;
+    color: var(--accent2); display: block; margin-bottom: 0.3rem;
+  }
+  .metric-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+
+  /* ── Sections ── */
+  section {
+    margin-bottom: 4rem;
+    opacity: 0; transform: translateY(22px);
+  }
+  section.visible { animation: fadeUp 0.7s ease forwards; }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.63rem;
+    color: var(--accent2);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem; font-weight: 700;
+    margin-bottom: 1.2rem; color: #f0e8dc;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.5rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover { border-color: rgba(217,119,6,0.35); transform: translateY(-2px); }
+
+  /* ── Dataset cards ── */
+  .dataset-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+  .ds-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem;
+    transition: all 0.2s;
+  }
+  .ds-card:hover { border-color: var(--accent); }
+  .ds-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .ds-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem; font-weight: 700;
+    color: #f0e8dc; margin-bottom: 0.3rem;
+  }
+  .ds-file {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem; color: var(--accent2); margin-bottom: 0.6rem;
+  }
+  .ds-cols { font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+  .ds-cols code {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.67rem;
+    color: #a8926f; background: rgba(168,146,111,0.08);
+    padding: 0.1rem 0.35rem; border-radius: 3px;
+  }
+
+  /* ── Model cards ── */
+  .model-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
+  .model-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.3rem;
+    transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .model-card.winner {
+    border-color: rgba(217,119,6,0.5);
+    background: rgba(217,119,6,0.05);
+  }
+  .model-card.winner::before {
+    content: '★ DEPLOYED';
+    position: absolute; top: 10px; right: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem; letter-spacing: 0.08em;
+    color: var(--accent2);
+    border: 1px solid rgba(245,158,11,0.3);
+    background: rgba(245,158,11,0.08);
+    padding: 0.2rem 0.5rem; border-radius: 999px;
+  }
+  .model-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .model-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .model-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem; font-weight: 700;
+    color: #f0e8dc; margin-bottom: 0.8rem;
+  }
+  .model-recall {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.9rem; font-weight: 800;
+    color: var(--accent2); margin-bottom: 0.2rem;
+  }
+  .model-recall-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 0.8rem;
+  }
+  .model-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+
+  /* ── Workflow ── */
+  .workflow { display: flex; flex-direction: column; gap: 0; }
+  .wf-item {
+    display: grid; grid-template-columns: 48px 1fr;
+    gap: 1rem; position: relative;
+  }
+  .wf-item:not(:last-child) .wf-line {
+    position: absolute; left: 23px; top: 46px; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+  }
+  .wf-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--faint);
+    border: 1px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem; color: var(--accent2);
+    flex-shrink: 0; margin-top: 2px; position: relative; z-index: 1;
+  }
+  .wf-content { padding-bottom: 1.8rem; }
+  .wf-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.98rem; font-weight: 700;
+    color: #f0e8dc; margin-bottom: 0.3rem;
+  }
+  .wf-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.65; }
+
+  /* ── NLP pipeline ── */
+  .nlp-steps {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    align-items: center;
+  }
+  .nlp-step {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: all 0.2s;
+  }
+  .nlp-step:hover { border-color: var(--accent2); color: var(--accent2); }
+  .nlp-arrow { color: var(--muted); font-size: 0.85rem; }
+
+  /* ── EDA insights ── */
+  .eda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 1rem; }
+  .eda-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.1rem;
+    transition: all 0.2s;
+  }
+  .eda-card:hover { border-color: var(--accent); background: var(--faint); }
+  .eda-icon { font-size: 1.3rem; margin-bottom: 0.5rem; }
+  .eda-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 0.25rem;
+  }
+  .eda-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem; font-weight: 700; color: #f0e8dc;
+  }
+
+  /* ── Tech stack ── */
+  .tech-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .tech-pill {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; padding: 0.42rem 0.95rem;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    transition: all 0.2s; cursor: default;
+  }
+  .tech-pill:hover { border-color: var(--accent2); color: var(--accent2); }
+  .tech-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ── Code block ── */
+  .code-block {
+    background: #0a0905; border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.4rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem; color: #94846a;
+    overflow-x: auto; line-height: 1.9;
+  }
+  .code-block .kw { color: #60a5fa; }
+  .code-block .str { color: #34d399; }
+  .code-block .cm { color: #4a4035; font-style: italic; }
+
+  /* ── Deployment ── */
+  .deploy-steps {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+    gap: 1rem;
+  }
+  .deploy-step {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.1rem;
+    position: relative; overflow: hidden; transition: all 0.2s;
+  }
+  .deploy-step::before {
+    content: attr(data-n);
+    position: absolute; top: -8px; right: 8px;
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem; font-weight: 800;
+    color: rgba(217,119,6,0.06);
+  }
+  .deploy-step:hover { border-color: var(--accent); background: var(--faint); }
+  .deploy-icon { font-size: 1.2rem; margin-bottom: 0.5rem; }
+  .deploy-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem; font-weight: 700;
+    color: #f0e8dc; margin-bottom: 0.2rem;
+  }
+  .deploy-sub { font-size: 0.72rem; color: var(--muted); }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 2rem; position: relative; z-index: 1;
+  }
+  .footer-inner {
+    max-width: 1020px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem; font-weight: 700; color: #f0e8dc;
+  }
+  .footer-links { display: flex; gap: 1.5rem; list-style: none; }
+  .footer-links a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.63rem; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.05em; transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--accent2); }
+
+  /* ── Animations ── */
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+  @media(max-width:640px) {
+    .metrics { grid-template-columns: repeat(2,1fr); }
+    .dataset-grid, .model-grid { grid-template-columns: 1fr; }
+    nav { padding: 0.8rem 1.2rem; }
+    .nav-links { display: none; }
+    main { padding: 7rem 1.2rem 4rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<!-- Nav -->
+<nav>
+  <span class="nav-logo">ajaya · ml portfolio</span>
+  <ul class="nav-links">
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#data">Data</a></li>
+    <li><a href="#workflow">Pipeline</a></li>
+    <li><a href="#models">Models</a></li>
+    <li><a href="#eda">Insights</a></li>
+    <li><a href="#deploy">Deploy</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-tag">📚 Unsupervised Learning · NLP · Recommender System</div>
+    <h1>Kindle Book<br/>Recommendation<br/>System</h1>
+    <p class="hero-sub">Personalized book discovery using Collaborative Filtering, Content-Based TF-IDF, and k-NN — deployed as an interactive Streamlit application.</p>
+    <div class="badge-row">
+      <span class="badge b-amber">Python</span>
+      <span class="badge b-green">Collaborative Filtering</span>
+      <span class="badge b-blue">TF-IDF · NLP</span>
+      <span class="badge b-rose">k-NN Cosine Similarity</span>
+      <span class="badge b-sky">Streamlit</span>
+      <span class="badge b-purple">NLTK</span>
+      <span class="badge b-amber">Joblib · Pickle</span>
+      <span class="badge b-green">Scikit-learn</span>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="https://github.com/Ajaya210/Kindle-Book-Recommendation-System" target="_blank">
+        ⬡ GitHub Repository
+      </a>
+      <a class="btn btn-outline" href="https://colab.research.google.com/github/Ajaya210/Kindle-Book-Recommendation-System/blob/main/Copy_of_Book_Recommendation_System_(Unsupervised_Learning_Project).ipynb" target="_blank">
+        ↗ Open in Colab
+      </a>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics" id="metrics">
+    <div class="metric-cell">
+      <span class="metric-val" data-target="95" data-suffix="%">0%</span>
+      <span class="metric-label">Best Recall@10</span>
+    </div>
+    <div class="metric-cell">
+      <span class="metric-val" data-target="3">0</span>
+      <span class="metric-label">Algorithms Built</span>
+    </div>
+    <div class="metric-cell">
+      <span class="metric-val" data-target="900">0</span>
+      <span class="metric-label">Active Users</span>
+    </div>
+    <div class="metric-cell">
+      <span class="metric-val" data-target="59" data-suffix="K">0K</span>
+      <span class="metric-label">Final Dataset Rows</span>
+    </div>
+  </div>
+
+  <!-- Overview -->
+  <section id="overview">
+    <div class="section-label">01 — Project Overview</div>
+    <div class="section-title">Making the World of Books Navigable</div>
+    <div class="card">
+      <p style="color:var(--muted);line-height:1.85;font-size:0.95rem;">
+        With millions of books across genres, readers often face <strong style="color:var(--text)">discovery paralysis</strong>. This project builds a multi-strategy recommendation engine
+        modelled on how platforms like Amazon and Netflix serve personalised content. Three complementary approaches — Collaborative Filtering, Content-Based (TF-IDF), and k-NN — were implemented and evaluated.
+        The best-performing model was serialised and deployed via a <strong style="color:var(--text)">Streamlit web application</strong> for real-time, interactive book recommendations.
+      </p>
+    </div>
+  </section>
+
+  <!-- Datasets -->
+  <section id="data">
+    <div class="section-label">02 — Datasets</div>
+    <div class="section-title">Three Interconnected Tables</div>
+    <div class="dataset-grid">
+      <div class="ds-card">
+        <div class="ds-icon">📖</div>
+        <div class="ds-name">Books</div>
+        <div class="ds-file">Books.csv</div>
+        <div class="ds-cols">
+          <code>ISBN</code> · <code>Book-Title</code> · <code>Book-Author</code><br/>
+          <code>Year-Of-Publication</code> · <code>Publisher</code><br/>
+          Image URL columns (dropped in preprocessing)
+        </div>
+      </div>
+      <div class="ds-card">
+        <div class="ds-icon">👤</div>
+        <div class="ds-name">Users</div>
+        <div class="ds-file">Users.csv</div>
+        <div class="ds-cols">
+          <code>User-ID</code> · <code>Location</code> · <code>Age</code><br/><br/>
+          Age distribution: peak 25–35 yrs.<br/>Positive skew; outliers treated.
+        </div>
+      </div>
+      <div class="ds-card">
+        <div class="ds-icon">⭐</div>
+        <div class="ds-name">Ratings</div>
+        <div class="ds-file">Ratings.csv</div>
+        <div class="ds-cols">
+          <code>User-ID</code> · <code>ISBN</code> · <code>Book-Rating</code><br/><br/>
+          Filtered: users with ≥ 200 ratings<br/>Books with ≥ 50 ratings → <strong style="color:var(--text)">900 users · 5.2L ratings</strong>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;" class="card">
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.7rem;">Final Merged Dataset</div>
+      <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+        <div><span style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:800;color:var(--accent2)">59,850</span><br/><span style="font-size:0.75rem;color:var(--muted)">Rows</span></div>
+        <div><span style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:800;color:var(--accent2)">10</span><br/><span style="font-size:0.75rem;color:var(--muted)">Columns</span></div>
+        <div><span style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:800;color:var(--accent2)">900</span><br/><span style="font-size:0.75rem;color:var(--muted)">Qualified Users</span></div>
+        <div><span style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:800;color:var(--accent2)">5.2L</span><br/><span style="font-size:0.75rem;color:var(--muted)">Total Ratings</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Workflow -->
+  <section id="workflow">
+    <div class="section-label">03 — ML Pipeline</div>
+    <div class="section-title">End-to-End Workflow</div>
+    <div class="workflow">
+      <div class="wf-item"><div class="wf-line"></div><div class="wf-num">01</div>
+        <div class="wf-content">
+          <div class="wf-title">Data Loading & Merging</div>
+          <div class="wf-desc">Loaded Books, Users, and Ratings CSVs. Merged on ISBN and User-ID. Dropped irrelevant image URL columns. Standardised column names across all three tables.</div>
+        </div>
+      </div>
+      <div class="wf-item"><div class="wf-line"></div><div class="wf-num">02</div>
+        <div class="wf-content">
+          <div class="wf-title">Data Cleaning & Filtering</div>
+          <div class="wf-desc">Custom function <code style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--accent2)">replace_df_value</code> fixed mismatched data. Converted Year column from object to integer. Filtered to users with ≥200 ratings and books with ≥50 ratings to reduce sparsity.</div>
+        </div>
+      </div>
+      <div class="wf-item"><div class="wf-line"></div><div class="wf-num">03</div>
+        <div class="wf-content">
+          <div class="wf-title">EDA & Visualisation (15 Charts)</div>
+          <div class="wf-desc">Countplots, histograms, boxplots, bar charts, line plots, heatmaps, and pair plots. Key findings: Nora Roberts is the most prolific author, Ballantine Books leads publishers, Wild Animus has the most ratings.</div>
+        </div>
+      </div>
+      <div class="wf-item"><div class="wf-line"></div><div class="wf-num">04</div>
+        <div class="wf-content">
+          <div class="wf-title">Hypothesis Testing (3 T-tests)</div>
+          <div class="wf-desc">Tested: USA vs Canada average user age; age of high vs low raters; number of ratings for high vs low rated books. T-tests selected for comparing means of two independent groups.</div>
+        </div>
+      </div>
+      <div class="wf-item"><div class="wf-line"></div><div class="wf-num">05</div>
+        <div class="wf-content">
+          <div class="wf-title">NLP Text Preprocessing</div>
+          <div class="wf-desc">Applied on book title and review text for Content-Based Filtering:</div>
+          <div style="margin-top:0.8rem;" class="nlp-steps">
+            <span class="nlp-step">Contraction Expand</span><span class="nlp-arrow">→</span>
+            <span class="nlp-step">Remove Punctuation</span><span class="nlp-arrow">→</span>
+            <span class="nlp-step">Remove URLs/Digits</span><span class="nlp-arrow">→</span>
+            <span class="nlp-step">Remove Stopwords</span><span class="nlp-arrow">→</span>
+            <span class="nlp-step">Lemmatization</span><span class="nlp-arrow">→</span>
+            <span class="nlp-step">TF-IDF Vectorizer</span>
+          </div>
+        </div>
+      </div>
+      <div class="wf-item"><div class="wf-line"></div><div class="wf-num">06</div>
+        <div class="wf-content">
+          <div class="wf-title">Model Building & Evaluation</div>
+          <div class="wf-desc">Three recommendation strategies built and evaluated on Recall@5, Recall@10, and Hit Rate. 80/20 train-test split. Best model selected for deployment.</div>
+        </div>
+      </div>
+      <div class="wf-item">
+        <div class="wf-num">07</div>
+        <div class="wf-content">
+          <div class="wf-title">Serialisation & Deployment</div>
+          <div class="wf-desc">Best model saved using Joblib/Pickle. FastAPI REST endpoint built. Streamlit app deployed on Streamlit Cloud for live interactive recommendations.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Models -->
+  <section id="models">
+    <div class="section-label">04 — Model Comparison</div>
+    <div class="section-title">Three Recommendation Strategies</div>
+    <div class="model-grid">
+      <div class="model-card winner">
+        <div class="model-num">Model 01</div>
+        <div class="model-name">Collaborative Filtering</div>
+        <div class="model-recall">95.76%</div>
+        <div class="model-recall-label">Recall@5 & Recall@10</div>
+        <div class="model-desc">Leverages collective user behaviour — users with similar reading/rating patterns get similar recommendations. Exceptional recall across top-5 and top-10 slots.</div>
+      </div>
+      <div class="model-card">
+        <div class="model-num">Model 02</div>
+        <div class="model-name">Content-Based Filtering</div>
+        <div class="model-recall" style="color:var(--muted);">~0.15%</div>
+        <div class="model-recall-label">Recall@5 & Recall@10</div>
+        <div class="model-desc">TF-IDF + cosine similarity on book content. User profiles built by averaging item vectors weighted by interaction strength. Low recall due to sparse content overlap.</div>
+      </div>
+      <div class="model-card">
+        <div class="model-num">Model 03</div>
+        <div class="model-name">k-NN (Cosine)</div>
+        <div class="model-recall" style="font-size:1.4rem;color:#34d399;">Hit Rate</div>
+        <div class="model-recall-label">Primary Metric</div>
+        <div class="model-desc">k-Nearest Neighbours with cosine distance in high-dimensional feature space. Measures whether at least one relevant item appears in top-k. Strong for book-to-book similarity.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--accent2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.8rem;">Why Collaborative Filtering Wins</div>
+      <p style="color:var(--muted);font-size:0.9rem;line-height:1.8;font-style:italic;font-family:'Playfair Display',serif;">
+        "Collaborative Filtering demonstrated exceptional performance with an impressive recall rate of 95%. This means that for nearly all users, the model successfully included at least one relevant book in the top-10 recommendations — the highest bar for a recommendation system and directly tied to user satisfaction and session depth."
+      </p>
+    </div>
+  </section>
+
+  <!-- EDA Insights -->
+  <section id="eda">
+    <div class="section-label">05 — EDA Insights</div>
+    <div class="section-title">What the Data Revealed</div>
+    <div class="eda-grid">
+      <div class="eda-card"><div class="eda-icon">📗</div><div class="eda-label">Most Rated Book</div><div class="eda-val">Wild Animus</div></div>
+      <div class="eda-card"><div class="eda-icon">✍️</div><div class="eda-label">Most Prolific Author</div><div class="eda-val">Nora Roberts</div></div>
+      <div class="eda-card"><div class="eda-icon">🏢</div><div class="eda-label">Top Publisher</div><div class="eda-val">Ballantine Books</div></div>
+      <div class="eda-card"><div class="eda-icon">📅</div><div class="eda-label">Peak Publication Year</div><div class="eda-val">Year 2000</div></div>
+      <div class="eda-card"><div class="eda-icon">👥</div><div class="eda-label">Core User Age Range</div><div class="eda-val">25 – 35 yrs</div></div>
+      <div class="eda-card"><div class="eda-icon">🌍</div><div class="eda-label">Top Author Countries</div><div class="eda-val">US · UK · Canada</div></div>
+      <div class="eda-card"><div class="eda-icon">⭐</div><div class="eda-label">Most Common Ratings</div><div class="eda-val">7 – 10 range</div></div>
+      <div class="eda-card"><div class="eda-icon">🔗</div><div class="eda-label">Multicollinearity</div><div class="eda-val">None detected</div></div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section id="tech">
+    <div class="section-label">06 — Technology Stack</div>
+    <div class="section-title">Tools & Libraries</div>
+    <div class="tech-grid">
+      <div class="tech-pill"><span class="dot" style="background:#f59e0b"></span>Python 3.x</div>
+      <div class="tech-pill"><span class="dot" style="background:#f59e0b"></span>Pandas · NumPy</div>
+      <div class="tech-pill"><span class="dot" style="background:#10b981"></span>Scikit-learn</div>
+      <div class="tech-pill"><span class="dot" style="background:#8b5cf6"></span>NLTK</div>
+      <div class="tech-pill"><span class="dot" style="background:#0ea5e9"></span>TF-IDF Vectorizer</div>
+      <div class="tech-pill"><span class="dot" style="background:#0ea5e9"></span>Cosine Similarity</div>
+      <div class="tech-pill"><span class="dot" style="background:#ef4444"></span>k-NN Classifier</div>
+      <div class="tech-pill"><span class="dot" style="background:#d97706"></span>Collaborative Filtering</div>
+      <div class="tech-pill"><span class="dot" style="background:#84cc16"></span>Matplotlib · Seaborn</div>
+      <div class="tech-pill"><span class="dot" style="background:#6366f1"></span>Scipy · T-test</div>
+      <div class="tech-pill"><span class="dot" style="background:#f97316"></span>Streamlit</div>
+      <div class="tech-pill"><span class="dot" style="background:#22d3ee"></span>Joblib · Pickle</div>
+      <div class="tech-pill"><span class="dot" style="background:#a78bfa"></span>Lemmatization (WordNet)</div>
+      <div class="tech-pill"><span class="dot" style="background:#34d399"></span>Recall@N · Hit Rate</div>
+    </div>
+  </section>
+
+  <!-- Deployment -->
+  <section id="deploy">
+    <div class="section-label">07 — Deployment</div>
+    <div class="section-title">From Notebook to Live App</div>
+    <div class="deploy-steps" style="margin-bottom:2rem;">
+      <div class="deploy-step" data-n="1"><div class="deploy-icon">🧠</div><div class="deploy-title">Train Best Model</div><div class="deploy-sub">Collaborative Filtering with 95.76% Recall</div></div>
+      <div class="deploy-step" data-n="2"><div class="deploy-icon">💾</div><div class="deploy-title">Serialise</div><div class="deploy-sub">Saved via Joblib / Pickle</div></div>
+      <div class="deploy-step" data-n="3"><div class="deploy-icon">⚡</div><div class="deploy-title">FastAPI</div><div class="deploy-sub">REST /recommend endpoint</div></div>
+      <div class="deploy-step" data-n="4"><div class="deploy-icon">📚</div><div class="deploy-title">Streamlit UI</div><div class="deploy-sub">Enter book title → get recommendations</div></div>
+      <div class="deploy-step" data-n="5"><div class="deploy-icon">🚀</div><div class="deploy-title">Cloud Deploy</div><div class="deploy-sub">Live on Streamlit Cloud</div></div>
+    </div>
+
+    <!-- Quickstart -->
+    <div class="section-label">Quickstart — Run Locally</div>
+    <div class="code-block">
+<span class="cm"># Clone the repository</span>
+<span class="kw">git</span> clone https://github.com/Ajaya210/Kindle-Book-Recommendation-System
+<span class="kw">cd</span> Kindle-Book-Recommendation-System
+
+<span class="cm"># Install dependencies</span>
+<span class="kw">pip</span> install -r requirements.txt
+
+<span class="cm"># Launch Streamlit app</span>
+<span class="kw">streamlit</span> run streamlit_app.py
+
+<span class="cm"># Or run FastAPI backend</span>
+<span class="kw">uvicorn</span> app.main:app --reload
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-name">Ajaya Kumar Pradhan</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.63rem;color:var(--muted);margin-top:0.2rem;">Data Analyst · Power BI Developer · ML Engineer</div>
+    </div>
+    <ul class="footer-links">
+      <li><a href="https://github.com/ajayaconnect" target="_blank">GitHub ↗</a></li>
+      <li><a href="https://github.com/Ajaya210/Kindle-Book-Recommendation-System" target="_blank">Project Repo ↗</a></li>
+      <li><a href="https://linkedin.com/in/" target="_blank">LinkedIn ↗</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script>
+  // ── Counter animation ──
+  function animateCounters() {
+    document.querySelectorAll('.metric-val[data-target]').forEach(el => {
+      const target = parseInt(el.dataset.target);
+      const suffix = el.dataset.suffix || '';
+      let current = 0;
+      const step = Math.max(1, Math.ceil(target / 55));
+      const timer = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = current + suffix;
+        if (current >= target) clearInterval(timer);
+      }, 22);
+    });
+  }
+
+  // ── Intersection observer ──
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('section').forEach(s => observer.observe(s));
+
+  // ── Metrics trigger ──
+  const metricsObs = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) { animateCounters(); metricsObs.disconnect(); }
+  }, { threshold: 0.3 });
+  metricsObs.observe(document.getElementById('metrics'));
+
+  // ── Active nav ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+  window.addEventListener('scroll', () => {
+    let cur = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) cur = s.id; });
+    navLinks.forEach(a => {
+      a.style.color = a.getAttribute('href') === '#' + cur ? 'var(--accent2)' : 'var(--muted)';
+    });
+  });
+</script>
+</body>
+</html>
